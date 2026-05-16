@@ -431,7 +431,7 @@ function showEditor() {
   topbarTitle.style.display = 'inline';
   topbarTitle.textContent = '✏️ ' + state.currentName;
   document.title = '✏️ ' + state.currentName + ' | p5.js 作品集';
-  previewFrame.src = '/preview-template.html';
+  previewFrame.src = 'preview-template.html';
   previewReady = false;
 }
 
@@ -578,7 +578,7 @@ $('#btnPasteCode')?.addEventListener('click', async () => {
 });
 
 $('#btnRefresh')?.addEventListener('click', () => {
-  previewFrame.src = '/preview-template.html';
+  previewFrame.src = 'preview-template.html';
   previewReady = false;
   setTimeout(() => sendCodeToEditorPreview(), 500);
 });
