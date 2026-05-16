@@ -212,7 +212,7 @@
           <span>🎬 预览</span>
           <button class="btn small" id="btnEditorPreview" title="在查看器中打开">↗ 查看器</button>
         </div>
-        <iframe id="previewFrame" src="/preview-template.html" sandbox="allow-scripts"></iframe>
+        <iframe id="previewFrame" src="preview-template.html" sandbox="allow-scripts"></iframe>
       </div>
     </div>
   </div>
@@ -222,8 +222,105 @@
 // ============ LocalStorage 数据层 ============
 const STORAGE_KEY = 'p5js_portfolio';
 
+const DEFAULT_FAN_CODE = `function setup() {
+  createCanvas(400, 400);
+  angleMode(DEGREES);
+  colorMode(HSB, 360, 255, 255);
+}
+
+function draw() {
+  // 半透明背景制造拖尾效果
+  background(20, 20, 30, 40);
+  
+  translate(width / 2, height / 2);
+  
+  let angle = frameCount * 3;  // 每帧旋转3度
+  
+  // 风扇底座
+  push();
+  fill(60);
+  noStroke();
+  rect(-8, 80, 16, 120, 3);
+  rect(-60, 180, 120, 20, 5);
+  pop();
+  
+  // 风扇中心圆
+  push();
+  fill(80);
+  stroke(120);
+  strokeWeight(2);
+  circle(0, 0, 40);
+  fill(40);
+  circle(0, 0, 16);
+  fill(200, 180, 50);
+  circle(0, 0, 6);
+  pop();
+  
+  // 风扇叶片 - 4片
+  for (let i = 0; i < 4; i++) {
+    push();
+    rotate(angle + i * 90);
+    
+    // 叶片渐变颜色
+    let hue = (frameCount * 0.5 + i * 90) % 360;
+    fill(hue, 200, 255, 180);
+    noStroke();
+    
+    // 叶片形状 - 使用贝塞尔曲线
+    beginShape();
+    vertex(0, 0);
+    bezierVertex(30, -30, 100, -60, 130, -30);
+    bezierVertex(140, -15, 130, 5, 90, 10);
+    bezierVertex(50, 15, 15, 5, 0, 0);
+    endShape(CLOSE);
+    
+    // 叶片上的高光
+    fill(255, 255, 255, 40);
+    beginShape();
+    vertex(10, -5);
+    bezierVertex(30, -25, 70, -40, 90, -25);
+    bezierVertex(70, -20, 35, -10, 10, -5);
+    endShape(CLOSE);
+    
+    pop();
+  }
+  
+  // 旋转光圈
+  push();
+  noFill();
+  stroke(100, 200, 255, 30 + 20 * sin(frameCount * 2));
+  strokeWeight(1);
+  let ringR = 130 + 10 * sin(frameCount * 1.5);
+  circle(0, 0, ringR * 2);
+  pop();
+}`;
+
+function seedDefaultArtworks(artworks) {
+  if (artworks.length > 0) return artworks;
+  const defaults = [
+    {
+      id: genId(),
+      name: '🌀 旋转风扇',
+      description: '4片动态炫彩风扇，带拖尾效果和旋转光圈',
+      code: DEFAULT_FAN_CODE,
+      thumbnail: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ];
+  saveData(defaults);
+  return defaults;
+}
+
 function loadData() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { return []; }
+  try {
+    let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    data = seedDefaultArtworks(data);
+    return data;
+  } catch(e) {
+    const seeded = seedDefaultArtworks([]);
+    return seeded;
+  }
 }
 
 function saveData(artworks) {
