@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>p5.js 查看器</title>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000}
+  canvas{display:block}
+  #error{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;
+    background:rgba(200,40,40,.9);color:#fff;padding:12px 16px;
+    font-family:monospace;font-size:13px;max-height:40%;overflow-y:auto;white-space:pre-wrap}
+  #info{position:fixed;top:0;left:0;right:0;z-index:100;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 16px;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);
+    color:#ccc;font-size:13px;transition:opacity .3s}
+  #info.hidden{opacity:0;pointer-events:none}
+  #info .title{color:#fff;font-weight:600;margin-right:auto}
+  #info .close{background:rgba(255,255,255,0.1);border:1px solid #444;
+    border-radius:6px;padding:4px 10px;color:#ccc;cursor:pointer;font-size:12px}
+  #info .close:hover{background:rgba(255,255,255,0.2)}
+  @media(max-width:600px){#info{padding:6px 10px;font-size:12px}}
+</style>
+</head>
+<body>
+<div id="info">
+  <span class="title" id="artTitle">p5.js 作品</span>
+  <button class="close" onclick="hideInfo()">关闭</button>
+</div>
+<div id="error"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"></script>
+<script>
+// Auto-hide info bar
+function hideInfo() {
+  document.getElementById('info').classList.add('hidden');
+}
+setTimeout(hideInfo, 3000);
+// Re-show on mousemove
+document.addEventListener('mousemove', () => {
+  document.getElementById('info').classList.remove('hidden');
+  clearTimeout(window._hideTimer);
+  window._hideTimer = setTimeout(hideInfo, 3000);
+});
+
+// Read artwork from localStorage
+const params = new URLSearchParams(window.location.search);
+const id = params.get('id');
+let artName = 'p5.js 作品';
+let artCode = '';
+
+if (id) {
+  const viewerKey = 'p5js_viewer_' + id;
+  try {
+    const data = JSON.parse(localStorage.getItem(viewerKey));
+    if (data) {
+      artName = data.name || artName;
+      artCode = data.code || '';
+      // Clean up
+      localStorage.removeItem(viewerKey);
+    }
+  } catch(e) {}
+}
+
+document.getElementById('artTitle').textContent = '🎨 ' + artName;
+document.title = artName + ' | p5.js';
+
+// Fallback: try loading from the main data
+if (!artCode) {
+  try {
+    const mainData = JSON.parse(localStorage.getItem('p5js_portfolio')) || [];
+    const art = mainData.find(a => a.id === id);
+    if (art) {
+      artCode = art.code || '';
+      artName = art.name || artName;
+      document.getElementById('artTitle').textContent = '🎨 ' + artName;
+      document.title = artName + ' | p5.js';
+    }
+  } catch(e) {}
+}
+
+// ===== Run p5.js =====
+let __sketch = null;
+const __errEl = document.getElementById('error');
+
+function __showError(m) {
+  __errEl.textContent = '⚠️ ' + m;
+  __errEl.style.display = 'block';
+}
+
+function __clearError() {
+  __errEl.style.display = 'none';
+}
+
+document.querySelectorAll('canvas').forEach(c => c.remove());
+__clearError();
+
+if (artCode) {
+  try {
+    const __fn = new Function('p', `
+      with(p) {
+        ${artCode}
+      }
+      if(typeof setup==='function') p.setup=setup;
+      if(typeof draw==='function') p.draw=draw;
+      if(typeof preload==='function') p.preload=preload;
+      if(typeof mousePressed==='function') p.mousePressed=mousePressed;
+      if(typeof mouseMoved==='function') p.mouseMoved=mouseMoved;
+      if(typeof mouseDragged==='function') p.mouseDragged=mouseDragged;
+      if(typeof mouseReleased==='function') p.mouseReleased=mouseReleased;
+      if(typeof keyPressed==='function') p.keyPressed=keyPressed;
+      if(typeof keyReleased==='function') p.keyReleased=keyReleased;
+      if(typeof windowResized==='function') p.windowResized=windowResized;
+      if(typeof touchStarted==='function') p.touchStarted=touchStarted;
+      if(typeof touchMoved==='function') p.touchMoved=touchMoved;
+      if(typeof touchEnded==='function') p.touchEnded=touchEnded;
+    `);
+    __sketch = new p5(__fn);
+  } catch(e) {
+    __showError(e.message);
+  }
+} else {
+  __showError('没有找到作品代码');
+}
+</script>
+</body>
+</html>

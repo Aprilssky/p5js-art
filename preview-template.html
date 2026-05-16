@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0a; }
+  #error { 
+    display: none; position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(200,40,40,0.9); color: #fff; padding: 12px 16px;
+    font-family: monospace; font-size: 13px; max-height: 40%; overflow-y: auto;
+    white-space: pre-wrap; z-index: 999;
+  }
+  canvas { display: block !important; }
+</style>
+</head>
+<body>
+<div id="error"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"></script>
+<script>
+let currentSketch = null;
+const errEl = document.getElementById('error');
+
+function showError(msg) {
+  errEl.textContent = '⚠️ ' + msg;
+  errEl.style.display = 'block';
+}
+
+function clearError() {
+  errEl.style.display = 'none';
+}
+
+// Listen for code from parent
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'run') {
+    runCode(e.data.code);
+  }
+});
+
+function runCode(code) {
+  // Remove previous sketch
+  if (currentSketch) {
+    try { currentSketch.remove(); } catch(ex) {}
+    currentSketch = null;
+  }
+  
+  // Clear canvas elements
+  document.querySelectorAll('canvas').forEach(c => c.remove());
+  clearError();
+  
+  // Override console.error to catch p5 errors more gracefully
+  const origError = console.error;
+  console.error = function(...args) {
+    const msg = args.join(' ');
+    showError(msg);
+    origError.apply(console, args);
+  };
+  
+  try {
+    // Create the sketch function: with(p) gives access to p5 globals,
+    // then bind user-defined lifecycle functions to p instance
+    const sketchFunc = new Function('p', `
+      with (p) {
+        ${code}
+      }
+      // Bind lifecycle functions to the p5 instance
+      if (typeof setup === 'function') p.setup = setup;
+      if (typeof draw === 'function') p.draw = draw;
+      if (typeof preload === 'function') p.preload = preload;
+      if (typeof mousePressed === 'function') p.mousePressed = mousePressed;
+      if (typeof mouseMoved === 'function') p.mouseMoved = mouseMoved;
+      if (typeof mouseDragged === 'function') p.mouseDragged = mouseDragged;
+      if (typeof mouseReleased === 'function') p.mouseReleased = mouseReleased;
+      if (typeof keyPressed === 'function') p.keyPressed = keyPressed;
+      if (typeof keyReleased === 'function') p.keyReleased = keyReleased;
+      if (typeof windowResized === 'function') p.windowResized = windowResized;
+      if (typeof touchStarted === 'function') p.touchStarted = touchStarted;
+      if (typeof touchMoved === 'function') p.touchMoved = touchMoved;
+      if (typeof touchEnded === 'function') p.touchEnded = touchEnded;
+    `);
+    
+    currentSketch = new p5(sketchFunc);
+
+    // Capture first frame after sketch renders
+    let firstFrameCaptured = false;
+    const captureThumbnail = () => {
+      if (firstFrameCaptured) return;
+      firstFrameCaptured = true;
+      // wait a tick for canvas to be painted
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const canvas = document.querySelector('canvas');
+          if (canvas && canvas.width > 0) {
+            window.parent.postMessage({
+              type: 'thumbnail',
+              dataUrl: canvas.toDataURL('image/png')
+            }, '*');
+          }
+        });
+      });
+    };
+    // Hook into the sketch to detect first frame
+    if (currentSketch.draw) {
+      const origDraw = currentSketch.draw.bind(currentSketch);
+      currentSketch.draw = function() {
+        origDraw();
+        captureThumbnail();
+      };
+    } else {
+      // No draw loop — capture after setup
+      setTimeout(captureThumbnail, 200);
+    }
+  } catch(e) {
+    showError(e.message);
+    console.error = origError;
+  }
+}
+
+// Request initial code from parent
+window.parent.postMessage({ type: 'ready' }, '*');
+</script>
+</body>
+</html>
