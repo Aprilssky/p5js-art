@@ -427,7 +427,7 @@ function openViewer(id) {
     name: art.name,
     code: art.code
   }));
-  window.open('/viewer.html?id=' + id, '_blank');
+  window.open('viewer.html?id=' + id, '_blank');
 }
 
 // ============ Editor ============
@@ -448,7 +448,7 @@ function openEditor(id) {
   codeEditor.value = art.code;
   
   showEditor();
-  navigateTo('/?edit=' + id);
+  navigateTo('?edit=' + id);
   updateLineCount();
   updateStatus();
   runPreview();
@@ -514,7 +514,7 @@ function showGallery() {
   topbarLogo.style.display = '';
   topbarTitle.style.display = 'none';
   document.title = '🎨 p5.js 作品集';
-  navigateTo('/');
+  navigateTo('.');
   renderGallery();
 }
 
