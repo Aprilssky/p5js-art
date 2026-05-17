@@ -156,6 +156,20 @@
   }
   .resize-handle:hover::after, .resize-handle:active::after { background: var(--accent); }
 
+  /* Fullscreen preview */
+  .preview-panel.fullscreen {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 50;
+    background: #000;
+  }
+  .preview-panel.fullscreen .code-header,
+  .preview-panel.fullscreen .preview-header { display: flex; }
+  .preview-panel.fullscreen .code-header { display: none; }
+  .code-panel { display: flex; flex-direction: column; }
+  .preview-panel.fullscreen ~ .code-panel { display: none; }
+
+  /* Toast */
+  #toast { transition: opacity 0.3s; }
+
   @media (max-width: 768px) {
     .editor-body { flex-direction: column; }
     .code-panel { border-right: none; border-bottom: 1px solid var(--border); }
@@ -170,7 +184,10 @@
     <span class="logo" id="topbarLogo">🎨 p5.js 作品集</span>
     <span class="logo" id="topbarTitle" style="display:none">✏️ </span>
     <button class="btn" id="btnNew" style="display:flex">＋ 新建</button>
+    <button class="btn" id="btnImport" style="display:flex" title="从 JSON 文件导入作品">📤 导入</button>
+    <button class="btn" id="btnExport" style="display:flex" title="导出全部作品为 JSON">📥 导出</button>
     <button class="btn" id="btnBack" style="display:none">← 返回</button>
+    <input type="file" id="importInput" accept=".json" style="display:none" onchange="importJSON(event)">
   </div>
 
   <!-- Gallery View -->
@@ -199,6 +216,7 @@
         <div class="code-header">
           <span>代码 <span id="lineCount">行: 0</span></span>
           <div class="code-actions">
+            <button class="btn small" id="btnTemplate">📦 模板</button>
             <button class="btn small" id="btnPasteCode">📋 粘贴</button>
             <button class="btn small" id="btnClearCode">🗑️ 清空</button>
             <button class="btn small" id="btnRefresh">🔄 刷新</button>
@@ -210,6 +228,7 @@
       <div class="preview-panel" id="previewPanel">
         <div class="preview-header">
           <span>🎬 预览</span>
+          <button class="btn small" id="btnFullscreen" title="全屏预览">⛶ 全屏</button>
           <button class="btn small" id="btnEditorPreview" title="在查看器中打开">↗ 查看器</button>
         </div>
         <iframe id="previewFrame" src="preview-template.html" sandbox="allow-scripts"></iframe>
@@ -222,78 +241,150 @@
 // ============ LocalStorage 数据层 ============
 const STORAGE_KEY = 'p5js_portfolio';
 
-const DEFAULT_FAN_CODE = `function setup() {
+// ===== 内置示例模板 =====
+const TEMPLATES = {
+  '🌀 旋转风扇': `function setup() {
   createCanvas(400, 400);
   angleMode(DEGREES);
   colorMode(HSB, 360, 255, 255);
 }
 
 function draw() {
-  // 半透明背景制造拖尾效果
   background(20, 20, 30, 40);
-  
   translate(width / 2, height / 2);
-  
-  let angle = frameCount * 3;  // 每帧旋转3度
-  
-  // 风扇底座
-  push();
-  fill(60);
-  noStroke();
-  rect(-8, 80, 16, 120, 3);
-  rect(-60, 180, 120, 20, 5);
-  pop();
-  
-  // 风扇中心圆
-  push();
-  fill(80);
-  stroke(120);
-  strokeWeight(2);
-  circle(0, 0, 40);
-  fill(40);
-  circle(0, 0, 16);
-  fill(200, 180, 50);
-  circle(0, 0, 6);
-  pop();
-  
-  // 风扇叶片 - 4片
+  let angle = frameCount * 3;
+  push(); fill(60); noStroke();
+  rect(-8, 80, 16, 120, 3); rect(-60, 180, 120, 20, 5); pop();
+  push(); fill(80); stroke(120); strokeWeight(2);
+  circle(0, 0, 40); fill(40); circle(0, 0, 16);
+  fill(200, 180, 50); circle(0, 0, 6); pop();
   for (let i = 0; i < 4; i++) {
-    push();
-    rotate(angle + i * 90);
-    
-    // 叶片渐变颜色
+    push(); rotate(angle + i * 90);
     let hue = (frameCount * 0.5 + i * 90) % 360;
-    fill(hue, 200, 255, 180);
-    noStroke();
-    
-    // 叶片形状 - 使用贝塞尔曲线
-    beginShape();
-    vertex(0, 0);
+    fill(hue, 200, 255, 180); noStroke();
+    beginShape(); vertex(0, 0);
     bezierVertex(30, -30, 100, -60, 130, -30);
     bezierVertex(140, -15, 130, 5, 90, 10);
-    bezierVertex(50, 15, 15, 5, 0, 0);
-    endShape(CLOSE);
-    
-    // 叶片上的高光
+    bezierVertex(50, 15, 15, 5, 0, 0); endShape(CLOSE);
     fill(255, 255, 255, 40);
-    beginShape();
-    vertex(10, -5);
+    beginShape(); vertex(10, -5);
     bezierVertex(30, -25, 70, -40, 90, -25);
-    bezierVertex(70, -20, 35, -10, 10, -5);
-    endShape(CLOSE);
-    
+    bezierVertex(70, -20, 35, -10, 10, -5); endShape(CLOSE);
     pop();
   }
-  
-  // 旋转光圈
-  push();
-  noFill();
+  push(); noFill();
   stroke(100, 200, 255, 30 + 20 * sin(frameCount * 2));
   strokeWeight(1);
-  let ringR = 130 + 10 * sin(frameCount * 1.5);
-  circle(0, 0, ringR * 2);
+  circle(0, 0, (130 + 10 * sin(frameCount * 1.5)) * 2);
   pop();
-}`;
+}`,
+  '🌊 动态波浪': `let cols, rows;
+let scl = 20;
+let flying = 0;
+
+function setup() {
+  createCanvas(400, 400, WEBGL);
+}
+
+function draw() {
+  background(10);
+  flying -= 0.05;
+  let yoff = flying;
+  
+  rotateX(PI / 3);
+  translate(-width / 2, -height / 2);
+  
+  strokeWeight(1);
+  for (let y = 0; y <= height; y += scl) {
+    beginShape(TRIANGLE_STRIP);
+    let xoff = 0;
+    for (let x = 0; x <= width; x += scl) {
+      let h = map(noise(xoff, yoff), 0, 1, -80, 80);
+      let r = map(x, 0, width, 100, 255);
+      let g = map(h, -80, 80, 50, 200);
+      let b = map(y, 0, height, 255, 100);
+      stroke(r, g, b, 180);
+      vertex(x, y, h);
+      xoff += 0.1;
+      h = map(noise(xoff, yoff + 0.05), 0, 1, -80, 80);
+      vertex(x, y + scl, h);
+    }
+    endShape();
+    yoff += 0.1;
+  }
+}`,
+  '✨ 粒子星云': `let particles = [];
+
+function setup() {
+  createCanvas(400, 400);
+  for (let i = 0; i < 200; i++) {
+    particles.push(new Particle());
+  }
+}
+
+function draw() {
+  background(10, 10, 20, 20);
+  translate(width / 2, height / 2);
+  for (let p of particles) {
+    p.update();
+    p.show();
+  }
+}
+
+class Particle {
+  constructor() {
+    this.angle = random(TWO_PI);
+    this.radius = random(50, 200);
+    this.speed = random(0.002, 0.01);
+    this.size = random(1, 4);
+    this.hue = random(360);
+  }
+  update() {
+    this.angle += this.speed;
+    this.radius += random(-0.5, 0.5) * 0.3;
+    this.radius = constrain(this.radius, 20, 220);
+  }
+  show() {
+    let x = cos(this.angle) * this.radius;
+    let y = sin(this.angle) * this.radius;
+    let alpha = map(this.radius, 20, 220, 200, 50);
+    colorMode(HSB, 360, 255, 255, 255);
+    fill(this.hue, 200, 255, alpha);
+    noStroke();
+    circle(x, y, this.size);
+    colorMode(RGB, 255);
+  }
+}`,
+  '🎨 彩色螺旋': `function setup() {
+  createCanvas(400, 400);
+  colorMode(HSB, 360, 255, 255);
+  noFill();
+}
+
+function draw() {
+  background(10, 10, 10, 30);
+  translate(width / 2, height / 2);
+  
+  let t = frameCount * 0.02;
+  let n = 300;
+  
+  beginShape();
+  for (let i = 0; i < n; i++) {
+    let angle = i * radians(15) + t * 3;
+    let r = 3 + i * 0.6 + 30 * sin(t + i * 0.05);
+    let x = cos(angle) * r;
+    let y = sin(angle) * r;
+    stroke((i + frameCount) % 360, 200, 255, 150);
+    strokeWeight(1.5);
+    vertex(x, y);
+    // 加小圆点
+    point(x + cos(angle + 0.5) * 5, y + sin(angle + 0.5) * 5);
+  }
+  endShape();
+}`
+};
+
+const DEFAULT_FAN_CODE = TEMPLATES['🌀 旋转风扇'];
 
 function seedDefaultArtworks(artworks) {
   if (artworks.length > 0) return artworks;
@@ -394,6 +485,7 @@ function renderGallery() {
         <div class="actions">
           <button class="btn-edit" onclick="event.stopPropagation(); openEditor('${a.id}')">✏️ 编辑</button>
           <button class="btn-edit" onclick="event.stopPropagation(); openViewer('${a.id}')">↗ 查看</button>
+          <button class="btn-edit" onclick="event.stopPropagation(); cloneArtwork('${a.id}')">📋 克隆</button>
         </div>
       </div>`;
   }).join('');
@@ -430,6 +522,116 @@ function openViewer(id) {
   window.open('viewer.html?id=' + id, '_blank');
 }
 
+// ===== 导出 / 导入 =====
+function exportJSON() {
+  const data = loadData();
+  const now = new Date();
+  const stamp = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'p5js-artworks-' + stamp + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error('数据格式错误');
+      // Validate each item has required fields
+      data.forEach((item, i) => {
+        if (!item.id || typeof item.code !== 'string') {
+          throw new Error('第 ' + (i + 1) + ' 项缺少 id 或 code 字段');
+        }
+      });
+      const existing = loadData();
+      const merged = state.view === 'editor'
+        ? existing
+        : []; // start fresh in gallery view
+      const useMerge = state.view === 'editor' &&
+        confirm('当前在编辑视图，选择「确定」合并导入（保留现有数据），「取消」则替换全部');
+      const finalData = useMerge
+        ? [...existing, ...data]
+        : data;
+      saveData(finalData);
+      state.artworks = finalData;
+      showGallery();
+      loadGallery();
+      showToast('✅ 导入成功，共 ' + finalData.length + ' 个作品');
+    } catch(err) {
+      alert('导入失败: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ===== 克隆作品 =====
+function cloneArtwork(id) {
+  const art = state.artworks.find(a => a.id === id);
+  if (!art) return;
+  const clone = {
+    id: genId(),
+    name: art.name + ' (副本)',
+    description: art.description,
+    code: art.code,
+    thumbnail: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  state.artworks.push(clone);
+  saveData(state.artworks);
+  renderGallery();
+  showToast('📋 已克隆「' + art.name + '」');
+}
+
+// ===== 模板加载 =====
+function loadTemplate(name) {
+  const code = TEMPLATES[name];
+  if (!code) return;
+  codeEditor.value = code;
+  state.currentCode = code;
+  state.saved = false;
+  updateStatus();
+  updateLineCount();
+  runPreview();
+  showToast('📦 已加载模板: ' + name);
+}
+
+// ===== 全屏预览 =====
+function toggleFullscreen() {
+  const previewPanel = $('#previewPanel');
+  if (previewPanel.classList.contains('fullscreen')) {
+    previewPanel.classList.remove('fullscreen');
+    document.body.style.overflow = '';
+  } else {
+    previewPanel.classList.add('fullscreen');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+// ===== Toast 消息 =====
+function showToast(msg, duration) {
+  duration = duration || 2000;
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.cssText = 'position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface2); color: var(--text); padding: 10px 20px; border-radius: 10px; border: 1px solid var(--border); font-size: 14px; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.4); transition: opacity 0.3s; opacity: 1;';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, duration);
+}
+
 // ============ Editor ============
 let previewReady = false;
 
@@ -455,11 +657,14 @@ function openEditor(id) {
 }
 
 function createArtwork() {
+  // Random default template
+  const tmplNames = Object.keys(TEMPLATES);
+  const defaultCode = tmplNames[Math.floor(Math.random() * tmplNames.length)];
   const art = {
     id: genId(),
     name: '未命名作品',
     description: '',
-    code: '',
+    code: TEMPLATES[defaultCode] || '',
     thumbnail: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -468,6 +673,7 @@ function createArtwork() {
   saveData(state.artworks);
   openEditor(art.id);
   renderGallery();
+  showToast('🎨 已创建新作品（随机模板）');
 }
 
 function saveArtwork() {
@@ -633,9 +839,50 @@ $('#btnEditorBack')?.addEventListener('click', () => {
   loadGallery();
 });
 
+$('#btnExport')?.addEventListener('click', exportJSON);
+
+$('#btnImport')?.addEventListener('click', () => {
+  document.getElementById('importInput').click();
+});
+
 $('#btnEditorPreview')?.addEventListener('click', () => {
   saveArtwork();
   if (state.currentId) openViewer(state.currentId);
+});
+
+$('#btnFullscreen')?.addEventListener('click', toggleFullscreen);
+
+$('#btnTemplate')?.addEventListener('click', () => {
+  const names = Object.keys(TEMPLATES);
+  const menu = document.createElement('div');
+  menu.style.cssText = 'position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; z-index: 100; box-shadow: 0 8px 32px rgba(0,0,0,0.5); min-width: 200px;';
+  const btn = $('#btnTemplate');
+  const rect = btn.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.left = rect.left + 'px';
+  menu.classList.add('template-menu');
+  names.forEach(name => {
+    const item = document.createElement('div');
+    item.textContent = name;
+    item.style.cssText = 'padding: 10px 16px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); transition: background 0.15s;';
+    item.onmouseenter = () => item.style.background = 'var(--surface2)';
+    item.onmouseleave = () => item.style.background = '';
+    item.onclick = () => {
+      loadTemplate(name);
+      menu.remove();
+    };
+    menu.appendChild(item);
+  });
+  document.body.appendChild(menu);
+  // Close on click outside
+  setTimeout(() => {
+    document.addEventListener('click', function closeMenu(e) {
+      if (!menu.contains(e.target) && e.target !== btn) {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+      }
+    });
+  }, 10);
 });
 
 btnSave.addEventListener('click', () => {
