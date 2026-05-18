@@ -341,7 +341,7 @@
           <button class="btn small" id="btnFullscreen" title="全屏预览">⛶ 全屏</button>
           <button class="btn small" id="btnEditorPreview" title="在查看器中打开">↗ 查看器</button>
         </div>
-        <iframe id="previewFrame" src="preview-template.html" sandbox="allow-scripts"></iframe>
+        <iframe id="previewFrame" src="preview-template.html" sandbox="allow-scripts allow-same-origin"></iframe>
       </div>
     </div>
   </div>
@@ -1166,7 +1166,7 @@ function loadAiConfig() {
     const raw = localStorage.getItem(AI_STORAGE_KEY);
     if (raw) return JSON.parse(_dec(raw));
   } catch(e) {}
-  return { endpoint: 'https://api.deepseek.com/anthropic/v1/messages', key: '', model: 'deepseek-v4-flash' };
+  return { endpoint: 'https://api.deepseek.com', key: '', model: 'deepseek-chat' };
 }
 
 function saveAiConfig(cfg) {
@@ -1269,7 +1269,7 @@ aiGenerateBtn.addEventListener('click', async () => {
 6. 如果用户的修改要求不明确，给出合理的创意方向`;
 
   try {
-    const endpoint = aiEndpoint.value.trim() || 'https://api.deepseek.com/anthropic/v1/messages';
+    const endpoint = aiEndpoint.value.trim() || 'https://api.deepseek.com';
     const apiKey = aiApiKey.value.trim();
     const model = aiModel.value.trim() || 'deepseek-v4-flash';
 
@@ -1284,14 +1284,16 @@ aiGenerateBtn.addEventListener('click', async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'Authorization': 'Bearer ' + apiKey
       },
       body: JSON.stringify({
         model: model,
         max_tokens: 4096,
-        system: systemPrompt,
         messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
           {
             role: 'user',
             content: `当前 p5.js 代码：
