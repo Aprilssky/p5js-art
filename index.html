@@ -245,6 +245,29 @@
   }
   .ai-diff-preview.show { display: block; }
 
+  details.ai-settings {
+    margin-top: 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface2);
+  }
+  details.ai-settings summary {
+    padding: 8px 12px; cursor: pointer; font-size: 12px; color: var(--text2);
+    user-select: none;
+  }
+  details.ai-settings summary:hover { color: var(--text); }
+  details.ai-settings[open] { border-color: var(--accent); }
+  .ai-settings-body {
+    padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .ai-settings-body label {
+    font-size: 11px; color: var(--text2); margin-bottom: 0; margin-top: 4px;
+  }
+  .ai-settings-body input {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px; color: var(--text); font-size: 13px;
+    font-family: monospace; outline: none;
+  }
+  .ai-settings-body input:focus { border-color: var(--accent); }
+
   .btn-ai-apply {
     padding: 8px 20px; border-radius: 8px; border: 1px solid var(--accent);
     background: transparent; color: var(--accent); font-size: 13px;
@@ -335,6 +358,17 @@
       <label>输入修改方向，AI 会读取当前代码生成新版本：</label>
       <textarea id="aiPrompt" placeholder="例如：把背景改成渐变色&#10;增加粒子数量到 500&#10;画成 3D 效果&#10;添加鼠标交互"></textarea>
       <div class="ai-diff-preview" id="aiDiffPreview"></div>
+      <details class="ai-settings" id="aiSettings">
+        <summary>⚙️ API 设置</summary>
+        <div class="ai-settings-body">
+          <label>API Endpoint</label>
+          <input type="text" id="aiEndpoint" value="https://api.deepseek.com/anthropic/v1/messages">
+          <label>API Key</label>
+          <input type="password" id="aiApiKey" placeholder="sk-...">
+          <label>模型</label>
+          <input type="text" id="aiModel" value="deepseek-v4-flash">
+        </div>
+      </details>
     </div>
     <div class="ai-dialog-footer">
       <div class="ai-status" id="aiStatus">
@@ -1121,11 +1155,23 @@ document.addEventListener('mouseup', () => {
 });
 
 // ============ AI 修改 ============
-const AI_CONFIG = {
-  endpoint: 'https://api.deepseek.com/anthropic/v1/messages',
-  key: 'sk-12a8b19e511f473cb65393fd64faa37b',
-  model: 'deepseek-v4-flash'
-};
+const AI_STORAGE_KEY = '_p5ai_cfg';
+
+// 简单混淆存储（base64 + 反转，防明文暴露）
+function _enc(t) { return btoa(t.split('').reverse().join('')); }
+function _dec(s) { try { return atob(s).split('').reverse().join(''); } catch(e) { return ''; } }
+
+function loadAiConfig() {
+  try {
+    const raw = localStorage.getItem(AI_STORAGE_KEY);
+    if (raw) return JSON.parse(_dec(raw));
+  } catch(e) {}
+  return { endpoint: 'https://api.deepseek.com/anthropic/v1/messages', key: '', model: 'deepseek-v4-flash' };
+}
+
+function saveAiConfig(cfg) {
+  try { localStorage.setItem(AI_STORAGE_KEY, _enc(JSON.stringify(cfg))); } catch(e) {}
+}
 
 const aiOverlay = $('#aiOverlay');
 const aiPrompt = $('#aiPrompt');
@@ -1135,17 +1181,26 @@ const aiGenerateBtn = $('#aiGenerateBtn');
 const aiApplyBtn = $('#aiApplyBtn');
 const aiDiffPreview = $('#aiDiffPreview');
 const aiClose = $('#aiClose');
+const aiEndpoint = $('#aiEndpoint');
+const aiApiKey = $('#aiApiKey');
+const aiModel = $('#aiModel');
 
 let _aiGeneratedCode = null;
 
 // Show AI dialog
 $('#btnAiEdit')?.addEventListener('click', () => {
+  // Load saved config into form fields
+  const cfg = loadAiConfig();
+  aiEndpoint.value = cfg.endpoint;
+  aiApiKey.value = cfg.key;
+  aiModel.value = cfg.model;
+
   aiPrompt.value = '';
   aiDiffPreview.classList.remove('show');
   aiApplyBtn.classList.remove('show');
   _aiGeneratedCode = null;
   aiStatus.className = 'ai-status';
-  aiStatusText.textContent = '就绪';
+  aiStatusText.textContent = cfg.key ? '就绪' : '⚠️ 请先设置 API Key';
   aiGenerateBtn.disabled = false;
   aiOverlay.classList.add('active');
   setTimeout(() => aiPrompt.focus(), 200);
@@ -1208,15 +1263,26 @@ aiGenerateBtn.addEventListener('click', async () => {
 6. 如果用户的修改要求不明确，给出合理的创意方向`;
 
   try {
-    const response = await fetch(AI_CONFIG.endpoint, {
+    const endpoint = aiEndpoint.value.trim() || 'https://api.deepseek.com/anthropic/v1/messages';
+    const apiKey = aiApiKey.value.trim();
+    const model = aiModel.value.trim() || 'deepseek-v4-flash';
+
+    if (!apiKey) {
+      aiStatus.className = 'ai-status error';
+      aiStatusText.textContent = '⚠️ 请先设置 API Key（⚙️ API 设置）';
+      aiGenerateBtn.disabled = false;
+      return;
+    }
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': AI_CONFIG.key,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: AI_CONFIG.model,
+        model: model,
         max_tokens: 4096,
         system: systemPrompt,
         messages: [
@@ -1263,6 +1329,9 @@ ${prompt}
     aiDiffPreview.textContent = previewText;
     aiDiffPreview.classList.add('show');
     aiApplyBtn.classList.add('show');
+
+    // 成功后保存配置到本地存储
+    saveAiConfig({ endpoint, key: apiKey, model });
 
     aiStatus.className = 'ai-status success';
     aiStatusText.textContent = '✅ 已生成，点击「应用代码」替换当前代码';
