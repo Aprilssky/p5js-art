@@ -1166,7 +1166,7 @@ function loadAiConfig() {
     const raw = localStorage.getItem(AI_STORAGE_KEY);
     if (raw) return JSON.parse(_dec(raw));
   } catch(e) {}
-  return { endpoint: 'https://api.deepseek.com', key: '', model: 'deepseek-chat' };
+  return { endpoint: 'https://api.deepseek.com/chat/completions', key: '', model: 'deepseek-chat' };
 }
 
 function saveAiConfig(cfg) {
@@ -1269,7 +1269,7 @@ aiGenerateBtn.addEventListener('click', async () => {
 6. 如果用户的修改要求不明确，给出合理的创意方向`;
 
   try {
-    const endpoint = aiEndpoint.value.trim() || 'https://api.deepseek.com';
+    const endpoint = aiEndpoint.value.trim() || 'https://api.deepseek.com/chat/completions';
     const apiKey = aiApiKey.value.trim();
     const model = aiModel.value.trim() || 'deepseek-v4-flash';
 
