@@ -1316,7 +1316,7 @@ ${prompt}
     }
 
     const data = await response.json();
-    const generated = data.content?.[0]?.text || '';
+    const generated = data.choices?.[0]?.message?.content || '';
 
     // Clean up markdown code fences if present
     let cleanCode = generated
