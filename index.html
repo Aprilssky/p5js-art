@@ -1208,6 +1208,12 @@ $('#btnAiEdit')?.addEventListener('click', () => {
 
 // Close handlers
 const closeAiDialog = () => {
+  // 关闭时自动保存 API 设置
+  saveAiConfig({
+    endpoint: aiEndpoint.value.trim(),
+    key: aiApiKey.value.trim(),
+    model: aiModel.value.trim()
+  });
   aiOverlay.classList.remove('active');
 };
 aiClose.addEventListener('click', closeAiDialog);
