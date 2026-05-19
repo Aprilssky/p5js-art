@@ -170,119 +170,83 @@
   /* Toast */
   #toast { transition: opacity 0.3s; }
 
-  /* ====== AI Dialog ====== */
-  .ai-overlay {
-    position: fixed; inset: 0; z-index: 1000;
-    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-    display: none; align-items: center; justify-content: center;
+  /* ====== AI Inline Panel ====== */
+  .ai-inline-panel {
+    display: none; flex-shrink: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 10px 12px; gap: 8px; flex-direction: column;
   }
-  .ai-overlay.active { display: flex; }
-  .ai-dialog {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; width: 520px; max-width: 90vw;
-    box-shadow: 0 16px 48px rgba(0,0,0,0.6); overflow: hidden;
+  .ai-inline-panel.open { display: flex; }
+  .ai-inline-panel .ai-row {
+    display: flex; align-items: flex-start; gap: 8px;
   }
-  .ai-dialog-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 18px; border-bottom: 1px solid var(--border);
-  }
-  .ai-dialog-header h3 {
-    font-size: 15px; font-weight: 600;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .ai-dialog-close {
-    background: none; border: none; color: var(--text2);
-    font-size: 20px; cursor: pointer; padding: 0 4px;
-  }
-  .ai-dialog-close:hover { color: var(--text); }
-  .ai-dialog-body { padding: 16px 18px; }
-  .ai-dialog-body label {
-    font-size: 12px; color: var(--text2); display: block; margin-bottom: 6px;
-  }
-  .ai-dialog-body textarea {
-    width: 100%; height: 80px; resize: vertical;
+  .ai-inline-panel .ai-row textarea {
+    flex: 1; min-height: 36px; max-height: 80px; resize: vertical;
     background: var(--code-bg); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 12px; color: var(--text);
+    border-radius: 8px; padding: 8px 10px; color: var(--text);
     font-size: 13px; font-family: inherit;
     outline: none; transition: border-color 0.2s;
+    line-height: 1.4;
   }
-  .ai-dialog-body textarea:focus { border-color: var(--accent); }
-  .ai-dialog-body textarea::placeholder { color: #555; }
-  .ai-dialog-footer {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 18px; border-top: 1px solid var(--border);
+  .ai-inline-panel .ai-row textarea:focus { border-color: var(--accent); }
+  .ai-inline-panel .ai-row textarea::placeholder { color: #555; }
+  .ai-inline-panel .ai-actions {
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
   }
-  .ai-status {
-    flex: 1; font-size: 12px; color: var(--text2);
-    display: flex; align-items: center; gap: 6px;
+  .ai-inline-panel .ai-status-row {
+    display: flex; align-items: center; gap: 8px; min-height: 20px;
   }
-  .ai-status .spinner {
+  .ai-inline-panel .ai-status {
+    font-size: 12px; color: var(--text2);
+    display: flex; align-items: center; gap: 6px; flex: 1;
+  }
+  .ai-inline-panel .ai-status .spinner {
     display: none; width: 14px; height: 14px;
     border: 2px solid var(--border); border-top-color: var(--accent);
     border-radius: 50%; animation: ai-spin 0.6s linear infinite;
   }
-  .ai-status.loading .spinner { display: inline-block; }
+  .ai-inline-panel .ai-status.loading .spinner { display: inline-block; }
   @keyframes ai-spin { to { transform: rotate(360deg); } }
-  .ai-status.error { color: var(--danger); }
-  .ai-status.success { color: #4caf50; }
-  .btn-ai {
-    padding: 8px 20px; border-radius: 8px; border: none;
+  .ai-inline-panel .ai-status.error { color: var(--danger); }
+  .ai-inline-panel .ai-status.success { color: #4caf50; }
+  .btn-ai-generate {
+    padding: 6px 16px; border-radius: 8px; border: none;
     background: linear-gradient(135deg, var(--accent), #6b4ef0);
-    color: #fff; font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: opacity 0.2s;
+    color: #fff; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
   }
-  .btn-ai:hover { opacity: 0.9; }
-  .btn-ai:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-ai-generate:hover { opacity: 0.9; }
+  .btn-ai-generate:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-ai-settings {
+    padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text2); font-size: 12px; cursor: pointer;
+    white-space: nowrap; transition: all 0.2s;
+  }
+  .btn-ai-settings:hover { border-color: var(--accent); color: var(--text); }
 
-  .ai-diff-preview {
-    margin-top: 12px; max-height: 200px; overflow-y: auto;
+  .ai-inline-settings {
+    display: none; flex-direction: column; gap: 6px;
+    background: var(--surface2); border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .ai-inline-settings.open { display: flex; }
+  .ai-inline-settings label {
+    font-size: 11px; color: var(--text2); margin-top: 2px;
+  }
+  .ai-inline-settings input {
     background: var(--code-bg); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 12px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    font-size: 12px; line-height: 1.5; white-space: pre-wrap;
-    color: #b8b8b8; display: none;
-  }
-  .ai-diff-preview.show { display: block; }
-
-  details.ai-settings {
-    margin-top: 12px; border: 1px solid var(--border); border-radius: 8px;
-    background: var(--surface2);
-  }
-  details.ai-settings summary {
-    padding: 8px 12px; cursor: pointer; font-size: 12px; color: var(--text2);
-    user-select: none;
-  }
-  details.ai-settings summary:hover { color: var(--text); }
-  details.ai-settings[open] { border-color: var(--accent); }
-  .ai-settings-body {
-    padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 6px;
-  }
-  .ai-settings-body label {
-    font-size: 11px; color: var(--text2); margin-bottom: 0; margin-top: 4px;
-  }
-  .ai-settings-body input {
-    background: var(--code-bg); border: 1px solid var(--border);
-    border-radius: 6px; padding: 6px 10px; color: var(--text); font-size: 13px;
+    border-radius: 6px; padding: 5px 8px; color: var(--text); font-size: 12px;
     font-family: monospace; outline: none;
   }
-  .ai-settings-body input:focus { border-color: var(--accent); }
-
-  .btn-ai-apply {
-    padding: 8px 20px; border-radius: 8px; border: 1px solid var(--accent);
-    background: transparent; color: var(--accent); font-size: 13px;
-    cursor: pointer; display: none;
-  }
-  .btn-ai-apply:hover { background: var(--accent); color: #fff; }
-  .btn-ai-apply.show { display: inline-block; }
+  .ai-inline-settings input:focus { border-color: var(--accent); }
 
   @media (max-width: 768px) {
     .editor-body { flex-direction: column; }
     .code-panel { border-right: none; border-bottom: 1px solid var(--border); }
     .resize-handle { display: none; }
-    .ai-dialog { width: 100%; max-width: 100%; border-radius: 0; }
-    .ai-overlay { align-items: flex-end; }
-    .ai-dialog { border-radius: 16px 16px 0 0; }
+    .ai-inline-panel .ai-row { flex-direction: column; }
+    .ai-inline-panel .ai-actions { align-self: flex-end; }
   }
 </style>
 </head>
@@ -326,13 +290,37 @@
           <span>代码 <span id="lineCount">行: 0</span></span>
           <div class="code-actions">
             <button class="btn small" id="btnTemplate">📦 模板</button>
-            <button class="btn small" id="btnAiEdit" style="background:linear-gradient(135deg,var(--accent),#6b4ef0);color:#fff;border-color:transparent" title="AI 修改代码">🤖 AI</button>
+            <button class="btn small" id="btnAiToggle" style="background:linear-gradient(135deg,var(--accent),#6b4ef0);color:#fff;border-color:transparent" title="AI 生成代码">🤖 AI</button>
             <button class="btn small" id="btnPasteCode">📋 粘贴</button>
             <button class="btn small" id="btnClearCode">🗑️ 清空</button>
             <button class="btn small" id="btnRefresh">🔄 刷新</button>
           </div>
         </div>
         <textarea id="codeEditor" spellcheck="false" placeholder="// 在这里写 p5.js 代码...&#10;function setup() {&#10;  createCanvas(400, 400);&#10;}&#10;&#10;function draw() {&#10;  background(30);&#10;  fill(255, 0, 100);&#10;  ellipse(mouseX, mouseY, 50);&#10;}"></textarea>
+        <!-- AI 内联面板 -->
+        <div class="ai-inline-panel" id="aiInlinePanel">
+          <div class="ai-row">
+            <textarea id="aiPrompt" placeholder="描述你想生成的效果… 比如：渐变背景 + 彩色粒子跟随鼠标"></textarea>
+            <div class="ai-actions">
+              <button class="btn-ai-generate" id="aiGenerateBtn">✨ 生成</button>
+              <button class="btn-ai-settings" id="aiSettingsToggle">⚙️</button>
+            </div>
+          </div>
+          <div class="ai-inline-settings" id="aiInlineSettings">
+            <label>API Endpoint</label>
+            <input type="text" id="aiEndpoint" value="https://api.deepseek.com/chat/completions">
+            <label>API Key</label>
+            <input type="password" id="aiApiKey" placeholder="sk-...">
+            <label>模型</label>
+            <input type="text" id="aiModel" value="deepseek-v4-flash">
+          </div>
+          <div class="ai-status-row">
+            <div class="ai-status" id="aiStatus">
+              <span class="spinner"></span>
+              <span id="aiStatusText">就绪</span>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="resize-handle" id="resizeHandle"></div>
       <div class="preview-panel" id="previewPanel">
@@ -347,39 +335,7 @@
   </div>
 </div>
 
-<!-- AI 修改对话框 -->
-<div class="ai-overlay" id="aiOverlay">
-  <div class="ai-dialog">
-    <div class="ai-dialog-header">
-      <h3>🤖 AI 修改代码</h3>
-      <button class="ai-dialog-close" id="aiClose">✕</button>
-    </div>
-    <div class="ai-dialog-body">
-      <label>输入修改方向，AI 会读取当前代码生成新版本：</label>
-      <textarea id="aiPrompt" placeholder="例如：把背景改成渐变色&#10;增加粒子数量到 500&#10;画成 3D 效果&#10;添加鼠标交互"></textarea>
-      <div class="ai-diff-preview" id="aiDiffPreview"></div>
-      <details class="ai-settings" id="aiSettings">
-        <summary>⚙️ API 设置</summary>
-        <div class="ai-settings-body">
-          <label>API Endpoint</label>
-          <input type="text" id="aiEndpoint" value="https://api.deepseek.com/anthropic/v1/messages">
-          <label>API Key</label>
-          <input type="password" id="aiApiKey" placeholder="sk-...">
-          <label>模型</label>
-          <input type="text" id="aiModel" value="deepseek-v4-flash">
-        </div>
-      </details>
-    </div>
-    <div class="ai-dialog-footer">
-      <div class="ai-status" id="aiStatus">
-        <span class="spinner"></span>
-        <span id="aiStatusText">就绪</span>
-      </div>
-      <button class="btn-ai-apply" id="aiApplyBtn">✅ 应用代码</button>
-      <button class="btn-ai" id="aiGenerateBtn">✨ 生成</button>
-    </div>
-  </div>
-</div>
+
 
 <script>
 // ============ LocalStorage 数据层 ============
@@ -1154,10 +1110,9 @@ document.addEventListener('mouseup', () => {
   }
 });
 
-// ============ AI 修改 ============
+// ============ AI 内联面板 ============
 const AI_STORAGE_KEY = '_p5ai_cfg';
 
-// 简单混淆存储（base64 + 反转，防明文暴露）
 function _enc(t) { return btoa(t.split('').reverse().join('')); }
 function _dec(s) { try { return atob(s).split('').reverse().join(''); } catch(e) { return ''; } }
 
@@ -1166,107 +1121,122 @@ function loadAiConfig() {
     const raw = localStorage.getItem(AI_STORAGE_KEY);
     if (raw) return JSON.parse(_dec(raw));
   } catch(e) {}
-  return { endpoint: 'https://api.deepseek.com/chat/completions', key: '', model: 'deepseek-chat' };
+  return { endpoint: 'https://api.deepseek.com/chat/completions', key: '', model: 'deepseek-v4-flash' };
 }
 
 function saveAiConfig(cfg) {
   try { localStorage.setItem(AI_STORAGE_KEY, _enc(JSON.stringify(cfg))); } catch(e) {}
 }
 
-const aiOverlay = $('#aiOverlay');
+const aiPanel = $('#aiInlinePanel');
 const aiPrompt = $('#aiPrompt');
 const aiStatus = $('#aiStatus');
 const aiStatusText = $('#aiStatusText');
 const aiGenerateBtn = $('#aiGenerateBtn');
-const aiApplyBtn = $('#aiApplyBtn');
-const aiDiffPreview = $('#aiDiffPreview');
-const aiClose = $('#aiClose');
+const aiSettings = $('#aiInlineSettings');
 const aiEndpoint = $('#aiEndpoint');
 const aiApiKey = $('#aiApiKey');
 const aiModel = $('#aiModel');
 
-let _aiGeneratedCode = null;
-
-// Show AI dialog
-$('#btnAiEdit')?.addEventListener('click', () => {
-  // Load saved config into form fields
+// 加载配置到表单
+function loadAiConfigIntoForm() {
   const cfg = loadAiConfig();
   aiEndpoint.value = cfg.endpoint;
-  aiApiKey.value = cfg.key;
+  aiApiKey.value = cfg.key || '';
   aiModel.value = cfg.model;
+  if (!cfg.key) {
+    aiStatus.className = 'ai-status';
+    aiStatusText.textContent = '⚠️ 请先设置 API Key（点击 ⚙️）';
+  } else {
+    aiStatus.className = 'ai-status';
+    aiStatusText.textContent = '就绪';
+  }
+}
 
-  aiPrompt.value = '';
-  aiDiffPreview.classList.remove('show');
-  aiApplyBtn.classList.remove('show');
-  _aiGeneratedCode = null;
-  aiStatus.className = 'ai-status';
-  aiStatusText.textContent = cfg.key ? '就绪' : '⚠️ 请先设置 API Key';
-  aiGenerateBtn.disabled = false;
-  aiOverlay.classList.add('active');
-  setTimeout(() => aiPrompt.focus(), 200);
+// 切换 AI 面板
+$('#btnAiToggle')?.addEventListener('click', () => {
+  const isOpen = aiPanel.classList.contains('open');
+  if (isOpen) {
+    aiPanel.classList.remove('open');
+  } else {
+    aiPanel.classList.add('open');
+    loadAiConfigIntoForm();
+    aiPrompt.value = '';
+    aiGenerateBtn.disabled = false;
+    aiStatus.className = 'ai-status';
+    aiSettings.classList.remove('open');
+    setTimeout(() => aiPrompt.focus(), 200);
+  }
 });
 
-// Close handlers
-const closeAiDialog = () => {
-  // 关闭时自动保存 API 设置
-  saveAiConfig({
-    endpoint: aiEndpoint.value.trim(),
-    key: aiApiKey.value.trim(),
-    model: aiModel.value.trim()
-  });
-  aiOverlay.classList.remove('active');
-};
-aiClose.addEventListener('click', closeAiDialog);
-aiOverlay.addEventListener('click', (e) => {
-  if (e.target === aiOverlay) closeAiDialog();
+// 设置面板切换
+$('#aiSettingsToggle')?.addEventListener('click', () => {
+  aiSettings.classList.toggle('open');
 });
 
-// Keyboard: Enter to submit, Escape to close
+// 键盘快捷键: Ctrl+Enter 生成
 document.addEventListener('keydown', (e) => {
-  if (!aiOverlay.classList.contains('active')) return;
-  if (e.key === 'Escape') { closeAiDialog(); return; }
+  if (!aiPanel.classList.contains('open')) return;
+  if (e.key === 'Escape') {
+    aiPanel.classList.remove('open');
+    return;
+  }
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault();
     aiGenerateBtn.click();
   }
 });
 
-// Generate
+// 保存一次配置
+function saveCurrentAiConfig() {
+  saveAiConfig({
+    endpoint: aiEndpoint.value.trim(),
+    key: aiApiKey.value.trim(),
+    model: aiModel.value.trim()
+  });
+}
+
+// 生成代码
 aiGenerateBtn.addEventListener('click', async () => {
   const prompt = aiPrompt.value.trim();
   if (!prompt) {
     aiStatus.className = 'ai-status error';
-    aiStatusText.textContent = '⚠️ 请先输入修改方向';
+    aiStatusText.textContent = '⚠️ 请输入你想要的效果描述';
     aiPrompt.focus();
     return;
   }
 
   const currentCode = codeEditor.value;
-  if (!currentCode.trim()) {
-    aiStatus.className = 'ai-status error';
-    aiStatusText.textContent = '⚠️ 编辑器中没有代码';
-    return;
-  }
 
   // Loading
   aiGenerateBtn.disabled = true;
-  aiApplyBtn.classList.remove('show');
-  aiDiffPreview.classList.remove('show');
-  _aiGeneratedCode = null;
   aiStatus.className = 'ai-status loading';
   aiStatusText.textContent = 'AI 正在思考...';
 
-  const systemPrompt = `你是一个 p5.js 创意编程专家。
+  const systemPrompt = currentCode.trim()
+    ? `你是一个 p5.js 创意编程专家。
 
 你的任务是根据用户的当前代码和修改要求，生成修改后的新代码。
 
 规则：
-1. 返回纯 JavaScript 代码，不要包含 markdown \`\`\` 代码块标记
+1. 返回纯 JavaScript 代码，不要包含 markdown 代码块标记
 2. 保持 p5.js 标准格式（function setup, function draw 等）
 3. 除非明确要求 3D，否则使用 2D canvas（createCanvas 不带 WEBGL）
 4. 给代码添加恰当的注释说明修改点
 5. 保持代码风格一致，变量名清晰
-6. 如果用户的修改要求不明确，给出合理的创意方向`;
+6. 如果用户的修改要求不明确，给出合理的创意方向`
+    : `你是一个 p5.js 创意编程专家。
+
+你的任务是从零开始生成 p5.js 代码。
+
+规则：
+1. 返回纯 JavaScript 代码，不要包含 markdown 代码块标记
+2. 保持 p5.js 标准格式（function setup, function draw 等）
+3. 除非明确要求 3D，否则使用 2D canvas（createCanvas 不带 WEBGL）
+4. 给代码添加恰当的注释
+5. 变量名清晰，代码风格良好
+6. 如果用户的要求不明确，给出一个有趣的创意方向
+7. 确保代码完整可运行，包含 setup 和 draw 函数`;
 
   try {
     const endpoint = aiEndpoint.value.trim() || 'https://api.deepseek.com/chat/completions';
@@ -1275,7 +1245,7 @@ aiGenerateBtn.addEventListener('click', async () => {
 
     if (!apiKey) {
       aiStatus.className = 'ai-status error';
-      aiStatusText.textContent = '⚠️ 请先设置 API Key（⚙️ API 设置）';
+      aiStatusText.textContent = '⚠️ 请先设置 API Key（点击 ⚙️）';
       aiGenerateBtn.disabled = false;
       return;
     }
@@ -1290,13 +1260,11 @@ aiGenerateBtn.addEventListener('click', async () => {
         model: model,
         max_tokens: 4096,
         messages: [
-          {
-            role: 'system',
-            content: systemPrompt
-          },
+          { role: 'system', content: systemPrompt },
           {
             role: 'user',
-            content: `当前 p5.js 代码：
+            content: currentCode.trim()
+              ? `当前 p5.js 代码：
 \`\`\`javascript
 ${currentCode}
 \`\`\`
@@ -1305,6 +1273,10 @@ ${currentCode}
 ${prompt}
 
 请只返回完整的修改后代码，不要加额外说明。`
+              : `请生成一段 p5.js 代码，要求如下：
+${prompt}
+
+请只返回完整的代码，不要加额外说明。`
           }
         ]
       })
@@ -1318,7 +1290,7 @@ ${prompt}
     const data = await response.json();
     const generated = data.choices?.[0]?.message?.content || '';
 
-    // Clean up markdown code fences if present
+    // Clean up markdown code fences
     let cleanCode = generated
       .replace(/^\`\`\`[\w]*\n?/, '')
       .replace(/\`\`\`\s*$/, '')
@@ -1328,21 +1300,30 @@ ${prompt}
       throw new Error('AI 返回内容为空');
     }
 
-    _aiGeneratedCode = cleanCode;
+    // 直接应用到编辑器
+    codeEditor.value = cleanCode;
+    state.currentCode = cleanCode;
+    state.saved = false;
+    updateStatus();
+    updateLineCount();
 
-    // Show diff preview (truncated if too long)
-    const previewText = cleanCode.length > 600
-      ? cleanCode.slice(0, 600) + '\n\n... (代码较长，点击「应用代码」后完整替换)'
-      : cleanCode;
-    aiDiffPreview.textContent = previewText;
-    aiDiffPreview.classList.add('show');
-    aiApplyBtn.classList.add('show');
-
-    // 成功后保存配置到本地存储
-    saveAiConfig({ endpoint, key: apiKey, model });
+    // 保存配置
+    saveCurrentAiConfig();
 
     aiStatus.className = 'ai-status success';
-    aiStatusText.textContent = '✅ 已生成，点击「应用代码」替换当前代码';
+    aiStatusText.textContent = '✅ 已应用！正在预览...';
+
+    // 刷新预览
+    runPreview();
+
+    // 延迟几秒后恢复状态提示
+    setTimeout(() => {
+      if (aiPanel.classList.contains('open')) {
+        loadAiConfigIntoForm();
+      }
+    }, 3000);
+
+    codeEditor.focus();
   } catch (err) {
     aiStatus.className = 'ai-status error';
     aiStatusText.textContent = '❌ ' + err.message;
@@ -1352,19 +1333,10 @@ ${prompt}
   }
 });
 
-// Apply generated code
-aiApplyBtn.addEventListener('click', () => {
-  if (!_aiGeneratedCode) return;
-  codeEditor.value = _aiGeneratedCode;
-  state.currentCode = _aiGeneratedCode;
-  state.saved = false;
-  updateStatus();
-  updateLineCount();
-  runPreview();
-  closeAiDialog();
-  showToast('🤖 AI 代码已应用');
-  codeEditor.focus();
-});
+// 点击面板外的 settings 自动保存
+aiEndpoint.addEventListener('change', saveCurrentAiConfig);
+aiApiKey.addEventListener('change', saveCurrentAiConfig);
+aiModel.addEventListener('change', saveCurrentAiConfig);
 
 // ===== Init =====
 initRouting();
