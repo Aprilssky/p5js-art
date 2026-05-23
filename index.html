@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>🎨 p5.js 作品集</title>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/material-darker.min.css">
 <style>
   :root {
     --bg: #0d0d0d;
@@ -17,6 +21,7 @@
     --danger: #e05555;
     --radius: 12px;
     --code-bg: #0f0f0f;
+    --chat-bg: #131313;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -132,10 +137,61 @@
     flex-shrink: 0; font-size: 12px; color: var(--text2);
   }
   .code-header .code-actions { display: flex; gap: 6px; }
-  #codeEditor {
-    flex:1; width:100%; background: var(--code-bg); color: #e6e6e6;
-    border: none; outline: none; padding: 16px; font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-    font-size: 13px; line-height: 1.6; resize: none; tab-size: 2;
+
+  /* ===== CodeMirror overrides ===== */
+  .CodeMirror {
+    flex: 1; height: auto !important;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 13px; line-height: 1.6;
+    background: var(--code-bg);
+    color: #e6e6e6;
+  }
+  .CodeMirror-gutters {
+    background: #0b0b0b !important;
+    border-right: 1px solid #222 !important;
+  }
+  .CodeMirror-linenumber {
+    color: #3a3a3a !important;
+    padding: 0 8px 0 4px !important;
+    font-size: 12px;
+  }
+  .CodeMirror-activeline-background { background: rgba(124,92,252,0.06) !important; }
+  .CodeMirror-activeline-gutter { background: #111 !important; }
+  .CodeMirror-matchingbracket {
+    outline: 1px solid rgba(124,92,252,0.4) !important;
+    color: #fff !important;
+    background: rgba(124,92,252,0.15) !important;
+  }
+  .CodeMirror-selected { background: rgba(124,92,252,0.2) !important; }
+  .CodeMirror-focused .CodeMirror-selected { background: rgba(124,92,252,0.25) !important; }
+  .cm-s-material-darker .CodeMirror-cursor { border-left: 2px solid var(--accent) !important; }
+  .cm-s-material-darker span.cm-keyword { color: #c792ea !important; }
+  .cm-s-material-darker span.cm-def { color: #82aaff !important; }
+  .cm-s-material-darker span.cm-variable { color: #f07178 !important; }
+  .cm-s-material-darker span.cm-variable-2 { color: #f78c6c !important; }
+  .cm-s-material-darker span.cm-variable-3 { color: #ffcb6b !important; }
+  .cm-s-material-darker span.cm-number { color: #f78c6c !important; }
+  .cm-s-material-darker span.cm-string { color: #c3e88d !important; }
+  .cm-s-material-darker span.cm-comment { color: #546e7a !important; font-style: italic; }
+  .cm-s-material-darker span.cm-builtin { color: #89ddff !important; }
+
+  /* Code folding gutter styling */
+  .CodeMirror-foldgutter { width: 16px !important; }
+  .CodeMirror-foldgutter-open, .CodeMirror-foldgutter-folded {
+    cursor: pointer; font-size: 13px; line-height: 1.6;
+    color: #555 !important; transition: color 0.15s;
+  }
+  .CodeMirror-foldgutter-open:hover, .CodeMirror-foldgutter-folded:hover { color: var(--accent) !important; }
+  .CodeMirror-foldgutter-open::after { content: "▾"; color: #555; }
+  .CodeMirror-foldgutter-folded::after { content: "▸"; color: #555; }
+  .CodeMirror-foldgutter-open:hover::after { color: var(--accent); }
+  .CodeMirror-foldgutter-folded:hover::after { color: var(--accent); }
+  /* fold marker inside code */
+  .CodeMirror-foldmarker {
+    color: var(--accent) !important; text-shadow: none !important;
+    background: rgba(124,92,252,0.1); border-radius: 3px;
+    padding: 0 4px; font-size: 11px; cursor: pointer;
+    border: 1px solid rgba(124,92,252,0.25);
   }
 
   .preview-panel { flex: 1; display: flex; flex-direction: column; background: #0a0a0a; }
@@ -170,7 +226,7 @@
   /* Toast */
   #toast { transition: opacity 0.3s; }
 
-  /* ====== AI Inline Panel ====== */
+  /* ====== AI Inline Panel (code generation) ====== */
   .ai-inline-panel {
     display: none; flex-shrink: 0;
     background: var(--surface); border-top: 1px solid var(--border);
@@ -241,12 +297,163 @@
   }
   .ai-inline-settings input:focus { border-color: var(--accent); }
 
+  /* ====== AI Chat Panel (conversation) ====== */
+  .ai-chat-overlay {
+    display: none; position: fixed; bottom: 0; right: 0;
+    width: 420px; max-width: 100vw; height: 60vh; max-height: 700px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-right: none; border-bottom: none;
+    border-radius: 16px 0 0 0;
+    z-index: 100;
+    flex-direction: column;
+    box-shadow: -4px 0 32px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  .ai-chat-overlay.open { display: flex; }
+
+  .ai-chat-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .ai-chat-header .title {
+    font-size: 14px; font-weight: 600;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .ai-chat-header .title-icon { font-size: 16px; }
+  .ai-chat-header .spacer { flex: 1; }
+  .ai-chat-header .close-btn {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text2); cursor: pointer;
+    padding: 3px 8px; font-size: 13px; transition: all 0.15s;
+  }
+  .ai-chat-header .close-btn:hover { color: var(--text); border-color: var(--text2); }
+
+  .ai-chat-messages {
+    flex: 1; overflow-y: auto; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 10px;
+    background: var(--chat-bg);
+  }
+  .ai-chat-messages::-webkit-scrollbar { width: 5px; }
+  .ai-chat-messages::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+  .chat-msg {
+    display: flex; gap: 8px; max-width: 85%;
+    animation: chatFadeIn 0.2s ease-out;
+  }
+  @keyframes chatFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .chat-msg.assistant { align-self: flex-start; }
+
+  .chat-msg .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .chat-msg.user .avatar { background: var(--accent); color: #fff; order: 1; }
+  .chat-msg.assistant .avatar { background: #2a2a3a; color: var(--accent2); }
+
+  .chat-msg .bubble {
+    padding: 8px 14px; border-radius: 12px;
+    font-size: 13px; line-height: 1.55; word-break: break-word;
+    position: relative;
+  }
+  .chat-msg.user .bubble {
+    background: var(--accent); color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-msg.assistant .bubble {
+    background: var(--surface2); color: var(--text);
+    border-bottom-left-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .chat-msg .bubble p { margin: 4px 0; }
+  .chat-msg .bubble p:first-child { margin-top: 0; }
+  .chat-msg .bubble p:last-child { margin-bottom: 0; }
+  .chat-msg .bubble code {
+    background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px;
+  }
+  .chat-msg .bubble pre {
+    background: rgba(0,0,0,0.4); border-radius: 8px; padding: 10px 12px;
+    margin: 8px 0; overflow-x: auto; font-size: 12px; border: 1px solid rgba(255,255,255,0.05);
+  }
+  .chat-msg .bubble pre code { background: none; padding: 0; }
+  .chat-msg .bubble ul, .chat-msg .bubble ol { margin: 4px 0; padding-left: 20px; }
+
+  .chat-typing {
+    align-self: flex-start; display: flex; gap: 8px;
+    animation: chatFadeIn 0.2s ease-out;
+  }
+  .chat-typing .avatar { width: 28px; height: 28px; border-radius: 50%;
+    background: #2a2a3a; color: var(--accent2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0; }
+  .chat-typing .bubble {
+    padding: 10px 16px; border-radius: 12px; border-bottom-left-radius: 4px;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .chat-typing .dot { width: 6px; height: 6px; border-radius: 50%;
+    background: #555; animation: dotPulse 1.2s infinite ease-in-out; }
+  .chat-typing .dot:nth-child(2) { animation-delay: 0.2s; }
+  .chat-typing .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotPulse { 0%,60%,100% { background: #555; } 30% { background: var(--accent); } }
+
+  .chat-sys-msg {
+    text-align: center; font-size: 11px; color: #555;
+    padding: 4px 0; animation: chatFadeIn 0.2s ease-out;
+  }
+
+  .ai-chat-input {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: var(--surface); border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .ai-chat-input textarea {
+    flex: 1; min-height: 36px; max-height: 80px; resize: vertical;
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 12px; color: var(--text);
+    font-size: 13px; font-family: inherit; line-height: 1.4;
+    outline: none; transition: border-color 0.2s;
+  }
+  .ai-chat-input textarea:focus { border-color: var(--accent); }
+  .ai-chat-input textarea::placeholder { color: #555; }
+  .ai-chat-input .send-btn {
+    padding: 8px 14px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #fff; font-size: 16px; cursor: pointer;
+    transition: opacity 0.2s; flex-shrink: 0; min-width: 40px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ai-chat-input .send-btn:hover { opacity: 0.85; }
+  .ai-chat-input .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .ai-chat-btn-toggle {
+    position: fixed; bottom: 20px; right: 20px;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none; color: #fff; font-size: 22px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(124,92,252,0.35);
+    z-index: 99; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ai-chat-btn-toggle:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(124,92,252,0.5); }
+  .ai-chat-btn-toggle.hidden { display: none; }
+
   @media (max-width: 768px) {
     .editor-body { flex-direction: column; }
     .code-panel { border-right: none; border-bottom: 1px solid var(--border); }
     .resize-handle { display: none; }
     .ai-inline-panel .ai-row { flex-direction: column; }
     .ai-inline-panel .ai-actions { align-self: flex-end; }
+    .ai-chat-overlay { width: 100vw; height: 65vh; max-height: 80vh; border-radius: 16px 16px 0 0; }
+    .ai-chat-btn-toggle { bottom: 16px; right: 16px; width: 44px; height: 44px; font-size: 20px; }
   }
 </style>
 </head>
@@ -290,12 +497,13 @@
           <span>代码 <span id="lineCount">行: 0</span></span>
           <div class="code-actions">
             <button class="btn small" id="btnTemplate">📦 模板</button>
-            <button class="btn small" id="btnAiToggle" style="background:linear-gradient(135deg,var(--accent),#6b4ef0);color:#fff;border-color:transparent" title="AI 生成代码">🤖 AI</button>
+            <button class="btn small" id="btnAiToggle" style="background:linear-gradient(135deg,var(--accent),#6b4ef0);color:#fff;border-color:transparent" title="AI 生成代码">🤖 AI 生成</button>
             <button class="btn small" id="btnPasteCode">📋 粘贴</button>
             <button class="btn small" id="btnClearCode">🗑️ 清空</button>
             <button class="btn small" id="btnRefresh">🔄 刷新</button>
           </div>
         </div>
+        <!-- CodeMirror replaces this textarea -->
         <textarea id="codeEditor" spellcheck="false" placeholder="// 在这里写 p5.js 代码...&#10;function setup() {&#10;  createCanvas(400, 400);&#10;}&#10;&#10;function draw() {&#10;  background(30);&#10;  fill(255, 0, 100);&#10;  ellipse(mouseX, mouseY, 50);&#10;}"></textarea>
         <!-- AI 内联面板 -->
         <div class="ai-inline-panel" id="aiInlinePanel">
@@ -335,11 +543,42 @@
   </div>
 </div>
 
+<!-- ====== AI 创作对话浮窗 ====== -->
+<button class="ai-chat-btn-toggle hidden" id="aiChatToggleBtn" title="AI 创作对话">💬</button>
+<div class="ai-chat-overlay" id="aiChatOverlay">
+  <div class="ai-chat-header">
+    <span class="title-icon">💬</span>
+    <span class="title">AI 创作对话</span>
+    <button class="btn small" id="chatClearBtn" title="清空对话" style="background:transparent;border-color:var(--border);color:var(--text2);padding:3px 8px;font-size:11px">🗑️ 清空</button>
+    <span class="spacer"></span>
+    <button class="close-btn" id="chatCloseBtn">✕</button>
+  </div>
+  <div class="ai-chat-messages" id="chatMessages">
+    <div class="chat-sys-msg">
+      💡 和 AI 讨论当前作品的创作方向，获取评价和改进建议。
+    </div>
+  </div>
+  <div class="ai-chat-input">
+    <textarea id="chatInput" placeholder="输入你的想法… （Enter 发送，Shift+Enter 换行）" rows="1"></textarea>
+    <button class="send-btn" id="chatSendBtn">➤</button>
+  </div>
+</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldgutter.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/brace-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/indent-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/comment-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/selection/active-line.min.js"></script>
 
 <script>
 // ============ LocalStorage 数据层 ============
 const STORAGE_KEY = 'p5js_portfolio';
+const CHAT_STORAGE_KEY = '_p5chat_msgs';
 
 // ===== 内置示例模板 =====
 const TEMPLATES = {
@@ -533,11 +772,84 @@ const state = {
   view: 'gallery'
 };
 
+// ============ CodeMirror Editor ============
+let cmEditor = null;
+
+function initCodeMirror() {
+  const textarea = document.getElementById('codeEditor');
+  cmEditor = CodeMirror.fromTextArea(textarea, {
+    mode: 'javascript',
+    theme: 'material-darker',
+    lineNumbers: true,
+    lineWrapping: false,
+    tabSize: 2,
+    indentUnit: 2,
+    indentWithTabs: false,
+    smartIndent: true,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    styleActiveLine: true,
+    foldGutter: true,
+    gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+    extraKeys: {
+      "Ctrl-Q": function(cm) { cm.foldCode(cm.getCursor()); },
+      "Cmd-Q": function(cm) { cm.foldCode(cm.getCursor()); },
+      "Ctrl-`": function(cm) { cm.foldAll(); },
+      "Cmd-`": function(cm) { cm.foldAll(); },
+      "Shift-Ctrl-`": function(cm) { cm.unfoldAll(); },
+      "Shift-Cmd-`": function(cm) { cm.unfoldAll(); },
+      "Ctrl-Space": "autocomplete",
+      "Tab": function(cm) {
+        if (cm.somethingSelected()) cm.indentSelection("add");
+        else cm.replaceSelection("  ", "end");
+      }
+    },
+    foldOptions: {
+      widget: function(from, to) {
+        var count = cmEditor.lineCount();
+        var inner = to.line - from.line;
+        return '\u00a0\u00a0\ue000 ' + inner + ' 行\u00a0\u00a0';
+      }
+    }
+  });
+
+  // Sync CodeMirror changes to state
+  cmEditor.on('change', function() {
+    state.saved = false;
+    state.currentCode = cmEditor.getValue();
+    updateStatus();
+    updateLineCount();
+    
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(runPreview, 800);
+  });
+
+  // Handle focus for keyboard shortcuts
+  cmEditor.on('focus', function() {
+    // ensure cm has focus for keyboard shortcut handling
+  });
+
+  updateLineCount();
+}
+
+// Helper to get/set code from CM
+function getEditorCode() {
+  return cmEditor ? cmEditor.getValue() : document.getElementById('codeEditor').value;
+}
+
+function setEditorCode(code) {
+  if (cmEditor) {
+    cmEditor.setValue(code);
+  } else {
+    document.getElementById('codeEditor').value = code;
+  }
+}
+
 // ============ DOM Refs ============
 const $ = (s) => document.querySelector(s);
 const gallery = $('#gallery');
 const editor = $('#editor');
-const codeEditor = $('#codeEditor');
+const codeEditorEl = $('#codeEditor');
 const nameInput = $('#nameInput');
 const descInput = $('#descInput');
 const previewFrame = $('#previewFrame');
@@ -613,7 +925,6 @@ function esc(s) {
 function openViewer(id) {
   const art = state.artworks.find(a => a.id === id);
   if (!art) return;
-  // Open viewer in new tab with data in localStorage
   const viewerKey = 'p5js_viewer_' + id;
   localStorage.setItem(viewerKey, JSON.stringify({
     name: art.name,
@@ -645,16 +956,15 @@ function importJSON(event) {
     try {
       const data = JSON.parse(e.target.result);
       if (!Array.isArray(data)) throw new Error('数据格式错误');
-      // Validate each item has required fields
       data.forEach((item, i) => {
         if (!item.id || typeof item.code !== 'string') {
           throw new Error('第 ' + (i + 1) + ' 项缺少 id 或 code 字段');
         }
       });
       const existing = loadData();
-      const merged = state.view === 'editor'
+      const mergeExisting = state.view === 'editor'
         ? existing
-        : []; // start fresh in gallery view
+        : [];
       const useMerge = state.view === 'editor' &&
         confirm('当前在编辑视图，选择「确定」合并导入（保留现有数据），「取消」则替换全部');
       const finalData = useMerge
@@ -696,7 +1006,7 @@ function cloneArtwork(id) {
 function loadTemplate(name) {
   const code = TEMPLATES[name];
   if (!code) return;
-  codeEditor.value = code;
+  setEditorCode(code);
   state.currentCode = code;
   state.saved = false;
   updateStatus();
@@ -747,17 +1057,19 @@ function openEditor(id) {
   
   nameInput.value = art.name;
   descInput.value = art.description || '';
-  codeEditor.value = art.code;
+  setEditorCode(art.code);
   
   showEditor();
   navigateTo('?edit=' + id);
   updateLineCount();
   updateStatus();
   runPreview();
+  
+  // Show the chat toggle button when in editor
+  $('#aiChatToggleBtn').classList.remove('hidden');
 }
 
 function createArtwork() {
-  // Random default template
   const tmplNames = Object.keys(TEMPLATES);
   const defaultCode = tmplNames[Math.floor(Math.random() * tmplNames.length)];
   const art = {
@@ -781,7 +1093,7 @@ function saveArtwork() {
   
   state.currentName = nameInput.value.trim() || '未命名作品';
   state.currentDesc = descInput.value.trim();
-  state.currentCode = codeEditor.value;
+  state.currentCode = getEditorCode();
   
   const idx = state.artworks.findIndex(a => a.id === state.currentId);
   if (idx !== -1) {
@@ -794,8 +1106,6 @@ function saveArtwork() {
   
   state.saved = true;
   updateStatus();
-  
-  // Update gallery card
   renderGallery();
 }
 
@@ -822,6 +1132,10 @@ function showGallery() {
   document.title = '🎨 p5.js 作品集';
   navigateTo('.');
   renderGallery();
+  // Hide chat toggle when not in editor
+  $('#aiChatToggleBtn').classList.add('hidden');
+  // Close chat overlay if open
+  closeChatPanel();
 }
 
 function showEditor() {
@@ -834,6 +1148,7 @@ function showEditor() {
   topbarTitle.style.display = 'inline';
   topbarTitle.textContent = '✏️ ' + state.currentName;
   document.title = '✏️ ' + state.currentName + ' | p5.js 作品集';
+  // Need to re-initialize preview even when we switch
   previewFrame.src = 'preview-template.html';
   previewReady = false;
 }
@@ -916,7 +1231,7 @@ function updateStatus() {
 }
 
 function updateLineCount() {
-  const lines = codeEditor.value.split('\n').length;
+  const lines = getEditorCode().split('\n').length;
   lineCount.textContent = '行: ' + lines;
 }
 
@@ -974,7 +1289,6 @@ $('#btnTemplate')?.addEventListener('click', () => {
     menu.appendChild(item);
   });
   document.body.appendChild(menu);
-  // Close on click outside
   setTimeout(() => {
     document.addEventListener('click', function closeMenu(e) {
       if (!menu.contains(e.target) && e.target !== btn) {
@@ -993,14 +1307,16 @@ btnSave.addEventListener('click', () => {
 btnDelete.addEventListener('click', deleteArtwork);
 
 $('#btnClearCode')?.addEventListener('click', () => {
-  if (codeEditor.value.length > 0) {
-    codeEditor.value = '';
+  const current = getEditorCode();
+  if (current.length > 0) {
+    setEditorCode('');
     state.currentCode = '';
     state.saved = false;
     updateStatus();
     updateLineCount();
     runPreview();
-    codeEditor.focus();
+    if (cmEditor) cmEditor.focus();
+    else document.getElementById('codeEditor').focus();
   }
 });
 
@@ -1008,13 +1324,13 @@ $('#btnPasteCode')?.addEventListener('click', async () => {
   try {
     const text = await navigator.clipboard.readText();
     if (text) {
-      codeEditor.value = text;
+      setEditorCode(text);
       state.currentCode = text;
       state.saved = false;
       updateStatus();
       updateLineCount();
       runPreview();
-      codeEditor.focus();
+      if (cmEditor) cmEditor.focus();
     }
   } catch (err) {
     alert('粘贴失败，请手动 Ctrl+V 粘贴。错误: ' + err.message);
@@ -1028,15 +1344,6 @@ $('#btnRefresh')?.addEventListener('click', () => {
 });
 
 let previewTimer;
-codeEditor.addEventListener('input', () => {
-  state.saved = false;
-  state.currentCode = codeEditor.value;
-  updateStatus();
-  updateLineCount();
-  
-  clearTimeout(previewTimer);
-  previewTimer = setTimeout(runPreview, 800);
-});
 
 nameInput.addEventListener('input', () => {
   state.saved = false;
@@ -1061,28 +1368,20 @@ document.addEventListener('keydown', (e) => {
     }
   }
   if (e.key === 'Escape' && state.view === 'editor') {
+    // Avoid closing if chat is open
+    if ($('#aiChatOverlay').classList.contains('open')) {
+      closeChatPanel();
+      return;
+    }
     showGallery();
     loadGallery();
-  }
-});
-
-// Tab in code editor
-codeEditor.addEventListener('keydown', (e) => {
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    const start = codeEditor.selectionStart;
-    const end = codeEditor.selectionEnd;
-    codeEditor.value = codeEditor.value.substring(0, start) + '  ' + codeEditor.value.substring(end);
-    codeEditor.selectionStart = codeEditor.selectionEnd = start + 2;
-    state.currentCode = codeEditor.value;
-    state.saved = false;
-    updateStatus();
   }
 });
 
 // Resize panels
 let resizing = false;
 const resizeHandle = $('#resizeHandle');
+const codePanel = $('#codePanel');
 resizeHandle.addEventListener('mousedown', (e) => {
   resizing = true;
   document.body.style.cursor = 'col-resize';
@@ -1110,7 +1409,7 @@ document.addEventListener('mouseup', () => {
   }
 });
 
-// ============ AI 内联面板 ============
+// ============ AI 代码生成面板 (Inline) ============
 const AI_STORAGE_KEY = '_p5ai_cfg';
 
 function _enc(t) { return btoa(t.split('').reverse().join('')); }
@@ -1138,7 +1437,6 @@ const aiEndpoint = $('#aiEndpoint');
 const aiApiKey = $('#aiApiKey');
 const aiModel = $('#aiModel');
 
-// 加载配置到表单
 function loadAiConfigIntoForm() {
   const cfg = loadAiConfig();
   aiEndpoint.value = cfg.endpoint;
@@ -1153,7 +1451,6 @@ function loadAiConfigIntoForm() {
   }
 }
 
-// 切换 AI 面板
 $('#btnAiToggle')?.addEventListener('click', () => {
   const isOpen = aiPanel.classList.contains('open');
   if (isOpen) {
@@ -1169,25 +1466,10 @@ $('#btnAiToggle')?.addEventListener('click', () => {
   }
 });
 
-// 设置面板切换
 $('#aiSettingsToggle')?.addEventListener('click', () => {
   aiSettings.classList.toggle('open');
 });
 
-// 键盘快捷键: Ctrl+Enter 生成
-document.addEventListener('keydown', (e) => {
-  if (!aiPanel.classList.contains('open')) return;
-  if (e.key === 'Escape') {
-    aiPanel.classList.remove('open');
-    return;
-  }
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-    e.preventDefault();
-    aiGenerateBtn.click();
-  }
-});
-
-// 保存一次配置
 function saveCurrentAiConfig() {
   saveAiConfig({
     endpoint: aiEndpoint.value.trim(),
@@ -1196,7 +1478,6 @@ function saveCurrentAiConfig() {
   });
 }
 
-// 生成代码
 aiGenerateBtn.addEventListener('click', async () => {
   const prompt = aiPrompt.value.trim();
   if (!prompt) {
@@ -1206,9 +1487,8 @@ aiGenerateBtn.addEventListener('click', async () => {
     return;
   }
 
-  const currentCode = codeEditor.value;
+  const currentCode = getEditorCode();
 
-  // Loading
   aiGenerateBtn.disabled = true;
   aiStatus.className = 'ai-status loading';
   aiStatusText.textContent = 'AI 正在思考...';
@@ -1290,7 +1570,6 @@ ${prompt}
     const data = await response.json();
     const generated = data.choices?.[0]?.message?.content || '';
 
-    // Clean up markdown code fences
     let cleanCode = generated
       .replace(/^\`\`\`[\w]*\n?/, '')
       .replace(/\`\`\`\s*$/, '')
@@ -1300,30 +1579,25 @@ ${prompt}
       throw new Error('AI 返回内容为空');
     }
 
-    // 直接应用到编辑器
-    codeEditor.value = cleanCode;
+    setEditorCode(cleanCode);
     state.currentCode = cleanCode;
     state.saved = false;
     updateStatus();
     updateLineCount();
 
-    // 保存配置
     saveCurrentAiConfig();
 
     aiStatus.className = 'ai-status success';
     aiStatusText.textContent = '✅ 已应用！正在预览...';
-
-    // 刷新预览
     runPreview();
 
-    // 延迟几秒后恢复状态提示
     setTimeout(() => {
       if (aiPanel.classList.contains('open')) {
         loadAiConfigIntoForm();
       }
     }, 3000);
 
-    codeEditor.focus();
+    if (cmEditor) cmEditor.focus();
   } catch (err) {
     aiStatus.className = 'ai-status error';
     aiStatusText.textContent = '❌ ' + err.message;
@@ -1333,13 +1607,323 @@ ${prompt}
   }
 });
 
-// 点击面板外的 settings 自动保存
 aiEndpoint.addEventListener('change', saveCurrentAiConfig);
 aiApiKey.addEventListener('change', saveCurrentAiConfig);
 aiModel.addEventListener('change', saveCurrentAiConfig);
 
+// ============ AI 创作对话面板 ============
+const chatOverlay = $('#aiChatOverlay');
+const chatToggleBtn = $('#aiChatToggleBtn');
+const chatCloseBtn = $('#chatCloseBtn');
+const chatMessages = $('#chatMessages');
+const chatInput = $('#chatInput');
+const chatSendBtn = $('#chatSendBtn');
+const chatClearBtn = $('#chatClearBtn');
+
+// System prompt for the chat evaluation AI
+const CHAT_SYSTEM_PROMPT = `你是一位专业的创意编程 / 数字艺术顾问。你的角色是：
+
+1. **评价与分析**：对用户当前 p5.js 作品从视觉效果、色彩搭配、构图、动感、交互性、创意性等角度给出诚恳的评价
+2. **改进建议**：针对作品中可以优化的部分给出具体、可操作的建议（配色、动画曲线、粒子效果、交互方式等）
+3. **创作方向**：根据用户描述，帮他们探索和拓展创作方向，提供灵感启发
+4. **技术指导**：解释某些效果如何用 p5.js 实现，给出代码思路（但不需要给出完整代码）
+
+对话风格：
+- 有温度，像一位懂艺术的朋友
+- 坦诚，不盲目吹捧，也不过于严厉
+- 多提具体的、建设性的意见
+- 能追问细节，引导用户深入思考自己的创作
+
+当前用户正在编辑的作品名称、描述和代码上下文会在每次对话时附上。请你基于这些上下文给出有针对性的回应。`;
+
+function loadChatMessages() {
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return [];
+}
+
+function saveChatMessages(msgs) {
+  try { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(msgs.slice(-50))); } catch(e) {}
+}
+
+function renderChatMessages() {
+  const msgs = loadChatMessages();
+  chatMessages.innerHTML = '';
+  
+  if (msgs.length === 0) {
+    chatMessages.innerHTML = '<div class="chat-sys-msg">💡 和 AI 讨论当前作品的创作方向，获取评价和改进建议。</div>';
+    return;
+  }
+  
+  msgs.forEach(m => {
+    appendMessageToDOM(m.role, m.content, false);
+  });
+  scrollChatToBottom();
+}
+
+function appendMessageToDOM(role, content, animate) {
+  // Remove the system tip if it exists and we have real messages
+  const sysMsg = chatMessages.querySelector('.chat-sys-msg');
+  if (sysMsg) sysMsg.remove();
+  
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  if (!animate) div.style.animation = 'none';
+  
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = role === 'user' ? '👤' : '🤖';
+  
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  
+  // Simple markdown-like rendering
+  bubble.innerHTML = renderMarkdown(content);
+  
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  chatMessages.appendChild(div);
+}
+
+function renderMarkdown(text) {
+  // Escape HTML first
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  // Code blocks (``` ... ```)
+  html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, function(match, lang, code) {
+    return '<pre><code>' + code.trim() + '</code></pre>';
+  });
+  
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  
+  // Bold and italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  
+  // Line breaks (double for paragraphs)
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  
+  // Wrap in paragraph if not already wrapped with block-level elements
+  if (!html.startsWith('<pre') && !html.startsWith('<p>')) {
+    html = '<p>' + html + '</p>';
+  }
+  
+  // Fix consecutive <br> at start/end
+  html = html.replace(/^<p><br>/g, '<p>');
+  html = html.replace(/<br><\/p>$/g, '</p>');
+  
+  return html;
+}
+
+function scrollChatToBottom() {
+  setTimeout(() => {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 50);
+}
+
+function addChatMessage(role, content) {
+  const msgs = loadChatMessages();
+  msgs.push({ role, content, timestamp: Date.now() });
+  saveChatMessages(msgs);
+  appendMessageToDOM(role, content, true);
+  scrollChatToBottom();
+}
+
+function showTypingIndicator() {
+  const div = document.createElement('div');
+  div.className = 'chat-typing';
+  div.id = 'chatTypingIndicator';
+  div.innerHTML = '<div class="avatar">🤖</div><div class="bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+  chatMessages.appendChild(div);
+  scrollChatToBottom();
+}
+
+function hideTypingIndicator() {
+  const el = document.getElementById('chatTypingIndicator');
+  if (el) el.remove();
+}
+
+function openChatPanel() {
+  chatOverlay.classList.add('open');
+  chatToggleBtn.classList.add('hidden');
+  renderChatMessages();
+  setTimeout(() => chatInput.focus(), 200);
+}
+
+function closeChatPanel() {
+  chatOverlay.classList.remove('open');
+  if (state.view === 'editor') {
+    chatToggleBtn.classList.remove('hidden');
+  }
+}
+
+// Convert chat messages to API format
+function buildChatApiMessages() {
+  const msgs = loadChatMessages();
+  const currentCode = getEditorCode();
+  const currentName = nameInput.value.trim() || '未命名作品';
+  const currentDesc = descInput.value.trim() || '无描述';
+  
+  // Context about current work
+  const contextMsg = `用户当前正在编辑的作品：
+- 名称：${currentName}
+- 描述：${currentDesc}
+
+当前代码：
+\`\`\`javascript
+${currentCode || '(空白的画布，还没有代码)'}
+\`\`\``;
+  
+  const apiMessages = [
+    { role: 'system', content: CHAT_SYSTEM_PROMPT + '\n\n' + contextMsg }
+  ];
+  
+  // Add last N messages for context (up to last 20)
+  const recentMsgs = msgs.slice(-20);
+  recentMsgs.forEach(m => {
+    apiMessages.push({ role: m.role, content: m.content });
+  });
+  
+  return apiMessages;
+}
+
+async function sendChatMessage() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  
+  // Disable UI
+  chatInput.value = '';
+  chatSendBtn.disabled = true;
+  chatInput.disabled = true;
+  chatInput.style.height = 'auto';
+  
+  // Add user message
+  addChatMessage('user', text);
+  
+  // Get AI config
+  const cfg = loadAiConfig();
+  const endpoint = cfg.endpoint || 'https://api.deepseek.com/chat/completions';
+  const apiKey = cfg.key || '';
+  const model = cfg.model || 'deepseek-v4-flash';
+  
+  if (!apiKey) {
+    addChatMessage('assistant', '⚠️ 请先设置 API Key。点击代码面板里的 **🤖 AI 生成** → ⚙️，填好 API Key 即可使用。');
+    chatSendBtn.disabled = false;
+    chatInput.disabled = false;
+    chatInput.focus();
+    return;
+  }
+  
+  // Show typing
+  showTypingIndicator();
+  
+  try {
+    const messages = buildChatApiMessages();
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: model,
+        max_tokens: 4096,
+        messages: messages
+      })
+    });
+    
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error('API 错误 (' + response.status + '): ' + errText.slice(0, 200));
+    }
+    
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content || '';
+    
+    if (!reply) throw new Error('AI 返回内容为空');
+    
+    hideTypingIndicator();
+    addChatMessage('assistant', reply);
+    
+    // Save config (key might have been updated)
+    saveCurrentAiConfig();
+    
+  } catch (err) {
+    hideTypingIndicator();
+    addChatMessage('assistant', '❌ 出错啦: ' + err.message);
+  } finally {
+    chatSendBtn.disabled = false;
+    chatInput.disabled = false;
+    chatInput.focus();
+  }
+}
+
+// Chat event handlers
+chatToggleBtn.addEventListener('click', openChatPanel);
+chatCloseBtn.addEventListener('click', closeChatPanel);
+
+chatSendBtn.addEventListener('click', sendChatMessage);
+
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+  if (e.key === 'Escape') {
+    closeChatPanel();
+  }
+});
+
+// Auto-resize chat input
+chatInput.addEventListener('input', () => {
+  chatInput.style.height = 'auto';
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 80) + 'px';
+});
+
+chatClearBtn.addEventListener('click', () => {
+  if (confirm('确定清空对话历史吗？')) {
+    localStorage.removeItem(CHAT_STORAGE_KEY);
+    chatMessages.innerHTML = '<div class="chat-sys-msg">💡 和 AI 讨论当前作品的创作方向，获取评价和改进建议。</div>';
+  }
+});
+
+// Close chat overlay when clicking outside on mobile
+// (only if click is on the chat toggle area)
+document.addEventListener('click', (e) => {
+  const isOverlay = chatOverlay.contains(e.target);
+  const isToggle = chatToggleBtn.contains(e.target);
+  if (chatOverlay.classList.contains('open') && !isOverlay && !isToggle) {
+    // Don't close on random clicks, only if the toggle button is clicked again
+  }
+});
+
+// ===== Fold all / unfold all with gutter click hints =====
+// Enable code folding via foldCode addon
+CodeMirror.defineExtension("foldAll", function() {
+  for (var i = 0; i < this.lineCount(); i++) {
+    try { this.foldCode({line: i, ch: 0}); } catch(e) {}
+  }
+});
+CodeMirror.defineExtension("unfoldAll", function() {
+  for (var i = 0; i < this.lineCount(); i++) {
+    try { this.unfoldCode({line: i, ch: 0}); } catch(e) {}
+  }
+});
+
 // ===== Init =====
-initRouting();
+document.addEventListener('DOMContentLoaded', function() {
+  initCodeMirror();
+  initRouting();
+});
 </script>
 </body>
 </html>
